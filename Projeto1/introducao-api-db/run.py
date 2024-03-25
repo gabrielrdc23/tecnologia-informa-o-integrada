@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.exc import SQLAlchemyError
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
@@ -59,13 +60,21 @@ def obter_detalhes_enquete(id):
 def votar_enquete(id):
     data = request.get_json()
     if 'opcao_id' in data:
-        opcao = OpcaoEnquete.query.get(data['opcao_id'])
-        if opcao:
-            opcao.votos += 1
-            db.session.commit()
-            return jsonify({"message": "Voto registrado com sucesso"}), 200
-        else:
-            return jsonify({"error": "Opção não encontrada"}), 404
+        try:
+            db.session.begin()
+
+            opcao = OpcaoEnquete.query.get(data['opcao_id'])
+            if opcao:
+                opcao.votos += 1
+                db.session.commit()  
+                return jsonify({"message": "Voto registrado com sucesso"}), 200
+            else:
+                return jsonify({"error": "Opção não encontrada"}), 404
+
+        except SQLAlchemyError as e:
+            db.session.rollback()  
+            return jsonify({"error": "Erro ao votar na enquete"}), 500
+
     else:
         return jsonify({"error": "opcao_id é obrigatório"}), 400
 
@@ -106,6 +115,8 @@ def adicionar_opcao_enquete(id):
 def deletar_enquete(id):
     enquete = Enquete.query.get(id)
     if enquete:
+        for opcao in enquete.opcoes:
+            db.session.delete(opcao)
         db.session.delete(enquete)
         db.session.commit()
         return jsonify({"message": "Enquete deletada com sucesso"}), 200
