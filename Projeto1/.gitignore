@@ -1,0 +1,21 @@
+# Byte-compiled Python files
+__pycache__/
+*.py[cod]
+
+# C extensions
+*.so
+
+# Python environment
+venv/
+ENV/
+
+# IDE files
+.idea/
+*.db
+
+# Flask stuff
+instance/
+.webassets-cache
+
+# SQLite database
+db.sqlite3
